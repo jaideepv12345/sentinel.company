@@ -313,6 +313,64 @@ export default function SOPSentinel() {
   const [simulationRunning, setSimulationRunning] = useState(false);
   const [investmentAmount, setInvestmentAmount] = useState(100000);
   const [documentMode, setDocumentMode] = useState('sop'); // 'sop' or 'hmp'
+  const [selectedState, setSelectedState] = useState('');
+  const [countyName, setCountyName] = useState('');
+  const [participatingJurisdictions, setParticipatingJurisdictions] = useState('');
+  
+  // US States for HMP mode
+  const usStates = [
+    { abbr: 'AL', name: 'Alabama', femaRegion: 'IV' }, { abbr: 'AK', name: 'Alaska', femaRegion: 'X' },
+    { abbr: 'AZ', name: 'Arizona', femaRegion: 'IX' }, { abbr: 'AR', name: 'Arkansas', femaRegion: 'VI' },
+    { abbr: 'CA', name: 'California', femaRegion: 'IX' }, { abbr: 'CO', name: 'Colorado', femaRegion: 'VIII' },
+    { abbr: 'CT', name: 'Connecticut', femaRegion: 'I' }, { abbr: 'DE', name: 'Delaware', femaRegion: 'III' },
+    { abbr: 'FL', name: 'Florida', femaRegion: 'IV' }, { abbr: 'GA', name: 'Georgia', femaRegion: 'IV' },
+    { abbr: 'HI', name: 'Hawaii', femaRegion: 'IX' }, { abbr: 'ID', name: 'Idaho', femaRegion: 'X' },
+    { abbr: 'IL', name: 'Illinois', femaRegion: 'V' }, { abbr: 'IN', name: 'Indiana', femaRegion: 'V' },
+    { abbr: 'IA', name: 'Iowa', femaRegion: 'VII' }, { abbr: 'KS', name: 'Kansas', femaRegion: 'VII' },
+    { abbr: 'KY', name: 'Kentucky', femaRegion: 'IV' }, { abbr: 'LA', name: 'Louisiana', femaRegion: 'VI' },
+    { abbr: 'ME', name: 'Maine', femaRegion: 'I' }, { abbr: 'MD', name: 'Maryland', femaRegion: 'III' },
+    { abbr: 'MA', name: 'Massachusetts', femaRegion: 'I' }, { abbr: 'MI', name: 'Michigan', femaRegion: 'V' },
+    { abbr: 'MN', name: 'Minnesota', femaRegion: 'V' }, { abbr: 'MS', name: 'Mississippi', femaRegion: 'IV' },
+    { abbr: 'MO', name: 'Missouri', femaRegion: 'VII' }, { abbr: 'MT', name: 'Montana', femaRegion: 'VIII' },
+    { abbr: 'NE', name: 'Nebraska', femaRegion: 'VII' }, { abbr: 'NV', name: 'Nevada', femaRegion: 'IX' },
+    { abbr: 'NH', name: 'New Hampshire', femaRegion: 'I' }, { abbr: 'NJ', name: 'New Jersey', femaRegion: 'II' },
+    { abbr: 'NM', name: 'New Mexico', femaRegion: 'VI' }, { abbr: 'NY', name: 'New York', femaRegion: 'II' },
+    { abbr: 'NC', name: 'North Carolina', femaRegion: 'IV' }, { abbr: 'ND', name: 'North Dakota', femaRegion: 'VIII' },
+    { abbr: 'OH', name: 'Ohio', femaRegion: 'V' }, { abbr: 'OK', name: 'Oklahoma', femaRegion: 'VI' },
+    { abbr: 'OR', name: 'Oregon', femaRegion: 'X' }, { abbr: 'PA', name: 'Pennsylvania', femaRegion: 'III' },
+    { abbr: 'RI', name: 'Rhode Island', femaRegion: 'I' }, { abbr: 'SC', name: 'South Carolina', femaRegion: 'IV' },
+    { abbr: 'SD', name: 'South Dakota', femaRegion: 'VIII' }, { abbr: 'TN', name: 'Tennessee', femaRegion: 'IV' },
+    { abbr: 'TX', name: 'Texas', femaRegion: 'VI' }, { abbr: 'UT', name: 'Utah', femaRegion: 'VIII' },
+    { abbr: 'VT', name: 'Vermont', femaRegion: 'I' }, { abbr: 'VA', name: 'Virginia', femaRegion: 'III' },
+    { abbr: 'WA', name: 'Washington', femaRegion: 'X' }, { abbr: 'WV', name: 'West Virginia', femaRegion: 'III' },
+    { abbr: 'WI', name: 'Wisconsin', femaRegion: 'V' }, { abbr: 'WY', name: 'Wyoming', femaRegion: 'VIII' },
+    { abbr: 'DC', name: 'District of Columbia', femaRegion: 'III' }, { abbr: 'PR', name: 'Puerto Rico', femaRegion: 'II' },
+    { abbr: 'VI', name: 'U.S. Virgin Islands', femaRegion: 'II' }, { abbr: 'GU', name: 'Guam', femaRegion: 'IX' }
+  ];
+  
+  // FEMA Region headquarters
+  const femaRegionHQ = {
+    'I': 'Boston', 'II': 'New York', 'III': 'Philadelphia', 'IV': 'Atlanta',
+    'V': 'Chicago', 'VI': 'Denton, TX', 'VII': 'Kansas City', 'VIII': 'Denver',
+    'IX': 'Oakland', 'X': 'Bothell, WA'
+  };
+  
+  // Get full jurisdiction name for HMP mode
+  const getHMPJurisdiction = () => {
+    if (documentMode !== 'hmp' || selectedCountry !== 'usa') {
+      return selectedCountry ? globalRegions[selectedRegion]?.countries[selectedCountry]?.name : '';
+    }
+    const state = usStates.find(s => s.abbr === selectedState);
+    if (!countyName || !state) return state?.name || 'United States';
+    return `${countyName}, ${state.name}`;
+  };
+  
+  // Get FEMA region info
+  const getFEMARegion = () => {
+    const state = usStates.find(s => s.abbr === selectedState);
+    if (!state) return null;
+    return { region: state.femaRegion, hq: femaRegionHQ[state.femaRegion] };
+  };
 
   // SOP Mode Navigation
   const stressTestNavItems = [
@@ -724,7 +782,11 @@ export default function SOPSentinel() {
   // HMP-specific results generation
   const generateHMPResults = () => {
     const countryData = selectedCountry && selectedRegion ? globalRegions[selectedRegion]?.countries[selectedCountry] : null;
-    const jurisdictionName = countryData?.name || 'Unknown';
+    
+    // Use county-specific jurisdiction for HMP mode
+    const jurisdictionName = getHMPJurisdiction() || countryData?.name || 'Unknown';
+    const stateName = selectedState ? usStates.find(s => s.abbr === selectedState)?.name : '';
+    const femaRegion = getFEMARegion();
     const countryPop = countryData?.population || 1000000;
     
     // Create unique document fingerprint
@@ -732,7 +794,7 @@ export default function SOPSentinel() {
       const nameHash = doc.name.split('').reduce((a, c, i) => a + c.charCodeAt(0) * (i + 1), 0);
       return sum + nameHash + (doc.size || 0);
     }, 0);
-    const seed = docFingerprint + (selectedCountry?.charCodeAt(0) || 0) * 100;
+    const seed = docFingerprint + (selectedCountry?.charCodeAt(0) || 0) * 100 + (countyName?.charCodeAt(0) || 0) * 50;
     
     // HMP-specific metrics
     const hciScore = seededRandom(seed, 55, 95); // Hazard Coverage Index
@@ -828,6 +890,11 @@ export default function SOPSentinel() {
       confidence: seededRandom(seed + 90, 82, 96),
       simulationId: `HMP-${(docFingerprint % 100000000).toString(36).toUpperCase()}`,
       jurisdiction: jurisdictionName,
+      stateName: stateName,
+      countyName: countyName,
+      femaRegion: femaRegion?.region || null,
+      femaRegionHQ: femaRegion?.hq || null,
+      participatingJurisdictions: participatingJurisdictions ? participatingJurisdictions.split(',').map(j => j.trim()) : [],
       documentsAnalyzed: uploadedDocuments.map(d => d.name),
       
       // HMP-specific metrics
@@ -1920,7 +1987,7 @@ checksum=SIM-${r.simulationId}
                 {expandedRegions[rk] && (
                   <div className="p-2 bg-white/50 space-y-1">
                     {Object.entries(region.countries).map(([ck, country]) => (
-                      <button key={ck} onClick={() => { setSelectedRegion(rk); setSelectedCountry(ck); }} className={`w-full flex items-center gap-3 p-2 rounded-lg ${selectedCountry === ck ? 'bg-amber-100 border border-amber-400' : 'hover:bg-gray-200'}`}>
+                      <button key={ck} onClick={() => { setSelectedRegion(rk); setSelectedCountry(ck); setSelectedState(''); setCountyName(''); }} className={`w-full flex items-center gap-3 p-2 rounded-lg ${selectedCountry === ck ? 'bg-amber-100 border border-amber-400' : 'hover:bg-gray-200'}`}>
                         <span className="text-xl">{country.flag}</span>
                         <div className="text-left"><p className="text-sm font-medium text-gray-800">{country.name}</p><p className="text-xs text-gray-500">{country.framework}</p></div>
                         {selectedCountry === ck && <Check className="w-4 h-4 text-amber-600 ml-auto" />}
@@ -1931,6 +1998,60 @@ checksum=SIM-${r.simulationId}
               </div>
             ))}
           </div>
+          
+          {/* State/County Selection for US HMP Mode */}
+          {documentMode === 'hmp' && selectedCountry === 'usa' && (
+            <div className="mt-4 pt-4 border-t border-gray-300 space-y-3">
+              <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 p-2 rounded-lg">
+                <Shield className="w-4 h-4" />
+                <span>HMP Mode: Select State & County</span>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                <select 
+                  value={selectedState} 
+                  onChange={(e) => setSelectedState(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select State...</option>
+                  {usStates.map(s => (
+                    <option key={s.abbr} value={s.abbr}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+              {selectedState && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">County/Parish Name</label>
+                    <input 
+                      type="text" 
+                      value={countyName}
+                      onChange={(e) => setCountyName(e.target.value)}
+                      placeholder="e.g., Guilford County"
+                      className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Participating Jurisdictions (optional)</label>
+                    <input 
+                      type="text" 
+                      value={participatingJurisdictions}
+                      onChange={(e) => setParticipatingJurisdictions(e.target.value)}
+                      placeholder="e.g., City of Greensboro, City of High Point"
+                      className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Comma-separated list of cities/towns in multi-jurisdictional plan</p>
+                  </div>
+                  {selectedState && (
+                    <div className="bg-gray-50 rounded-lg p-3 text-xs">
+                      <p className="font-medium text-gray-700">FEMA Region {getFEMARegion()?.region} ({getFEMARegion()?.hq})</p>
+                      <p className="text-gray-500 mt-1">{countyName ? `${countyName}, ${usStates.find(s => s.abbr === selectedState)?.name}` : usStates.find(s => s.abbr === selectedState)?.name}</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </div>
         <div className="bg-white shadow-sm rounded-xl border border-gray-300 p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2"><Upload className="w-5 h-5 text-amber-600" />Documents</h3>
@@ -2479,7 +2600,7 @@ Generated by SOP Sentinel Grant Writer
       {analysisResults?.documentMode === 'hmp' ? (
         <>
           <div className="grid grid-cols-5 gap-4">
-            {Object.entries(analysisResults.metrics).map(([key, m]) => (
+            {analysisResults.metrics && Object.entries(analysisResults.metrics).map(([key, m]) => (
               <div key={key} className={`bg-white shadow-sm rounded-xl border p-4 ${m.status === 'good' ? 'border-green-300' : m.status === 'warning' ? 'border-yellow-300' : 'border-red-300'}`}>
                 <p className="text-xs text-gray-500 uppercase">{m.name}</p>
                 <p className={`text-3xl font-bold ${m.status === 'good' ? 'text-green-600' : m.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>{m.value}%</p>
@@ -2491,7 +2612,7 @@ Generated by SOP Sentinel Grant Writer
             <div className="bg-white shadow-sm rounded-xl border border-gray-300 p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Hazard Coverage</h3>
               <div className="space-y-2">
-                {analysisResults.hazardIdentification.hazards.slice(0, 6).map((h, i) => (
+                {(analysisResults.hazardIdentification?.hazards || []).slice(0, 6).map((h, i) => (
                   <div key={i} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                     <span className="text-sm text-gray-700">{h.hazard}</span>
                     <span className={`px-2 py-0.5 rounded text-xs ${h.status === 'complete' ? 'bg-green-100 text-green-600' : h.status === 'partial' ? 'bg-yellow-100 text-yellow-600' : 'bg-red-100 text-red-600'}`}>{h.status}</span>
@@ -2502,12 +2623,12 @@ Generated by SOP Sentinel Grant Writer
             <div className="bg-white shadow-sm rounded-xl border border-gray-300 p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Implementation Progress</h3>
               <div className="space-y-4">
-                <div className="flex justify-between text-sm"><span className="text-gray-500">Completed</span><span className="font-medium text-green-600">{analysisResults.mitigationActions.completed} actions</span></div>
-                <div className="flex justify-between text-sm"><span className="text-gray-500">In Progress</span><span className="font-medium text-blue-600">{analysisResults.mitigationActions.inProgress} actions</span></div>
-                <div className="flex justify-between text-sm"><span className="text-gray-500">Not Started</span><span className="font-medium text-gray-500">{analysisResults.mitigationActions.notStarted} actions</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-500">Completed</span><span className="font-medium text-green-600">{analysisResults.mitigationActions?.completed || 0} actions</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-500">In Progress</span><span className="font-medium text-blue-600">{analysisResults.mitigationActions?.inProgress || 0} actions</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-500">Not Started</span><span className="font-medium text-gray-500">{analysisResults.mitigationActions?.notStarted || 0} actions</span></div>
                 <div className="h-4 bg-gray-200 rounded-full overflow-hidden flex">
-                  <div className="bg-green-500" style={{ width: `${(analysisResults.mitigationActions.completed / analysisResults.mitigationActions.total) * 100}%` }} />
-                  <div className="bg-blue-500" style={{ width: `${(analysisResults.mitigationActions.inProgress / analysisResults.mitigationActions.total) * 100}%` }} />
+                  <div className="bg-green-500" style={{ width: `${analysisResults.mitigationActions?.total ? (analysisResults.mitigationActions.completed / analysisResults.mitigationActions.total) * 100 : 0}%` }} />
+                  <div className="bg-blue-500" style={{ width: `${analysisResults.mitigationActions?.total ? (analysisResults.mitigationActions.inProgress / analysisResults.mitigationActions.total) * 100 : 0}%` }} />
                 </div>
               </div>
             </div>
@@ -2515,7 +2636,7 @@ Generated by SOP Sentinel Grant Writer
           <div className="bg-white shadow-sm rounded-xl border border-gray-300 p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Key Recommendations</h3>
             <div className="grid grid-cols-2 gap-3">
-              {analysisResults.recommendations.map((r, i) => (
+              {(analysisResults.recommendations || []).map((r, i) => (
                 <div key={i} className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
                   <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <span className="text-sm text-gray-700">{r}</span>
@@ -2538,18 +2659,18 @@ Generated by SOP Sentinel Grant Writer
   const HazardIdentification = () => (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3"><AlertTriangle className="w-8 h-8 text-blue-600" />Hazard Identification</h2>
-      {analysisResults?.documentMode === 'hmp' ? (
+      {analysisResults?.documentMode === 'hmp' && analysisResults?.hazardIdentification ? (
         <>
           <div className="grid grid-cols-4 gap-4">
-            <div className="bg-green-50 border border-green-300 rounded-xl p-4 text-center"><p className="text-3xl font-bold text-green-600">{analysisResults.hazardIdentification.complete}</p><p className="text-sm text-gray-500">Complete</p></div>
-            <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4 text-center"><p className="text-3xl font-bold text-yellow-600">{analysisResults.hazardIdentification.partial}</p><p className="text-sm text-gray-500">Partial</p></div>
-            <div className="bg-red-50 border border-red-300 rounded-xl p-4 text-center"><p className="text-3xl font-bold text-red-600">{analysisResults.hazardIdentification.missing}</p><p className="text-sm text-gray-500">Missing</p></div>
-            <div className="bg-blue-50 border border-blue-300 rounded-xl p-4 text-center"><p className="text-3xl font-bold text-blue-600">{analysisResults.hazardIdentification.score}%</p><p className="text-sm text-gray-500">Coverage Score</p></div>
+            <div className="bg-green-50 border border-green-300 rounded-xl p-4 text-center"><p className="text-3xl font-bold text-green-600">{analysisResults.hazardIdentification.complete || 0}</p><p className="text-sm text-gray-500">Complete</p></div>
+            <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4 text-center"><p className="text-3xl font-bold text-yellow-600">{analysisResults.hazardIdentification.partial || 0}</p><p className="text-sm text-gray-500">Partial</p></div>
+            <div className="bg-red-50 border border-red-300 rounded-xl p-4 text-center"><p className="text-3xl font-bold text-red-600">{analysisResults.hazardIdentification.missing || 0}</p><p className="text-sm text-gray-500">Missing</p></div>
+            <div className="bg-blue-50 border border-blue-300 rounded-xl p-4 text-center"><p className="text-3xl font-bold text-blue-600">{analysisResults.hazardIdentification.score || 0}%</p><p className="text-sm text-gray-500">Coverage Score</p></div>
           </div>
           <div className="bg-white shadow-sm rounded-xl border border-gray-300 p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Hazard Analysis Status</h3>
             <div className="space-y-2">
-              {analysisResults.hazardIdentification.hazards.map((h, i) => (
+              {(analysisResults.hazardIdentification.hazards || []).map((h, i) => (
                 <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <span className={`w-3 h-3 rounded-full ${h.status === 'complete' ? 'bg-green-500' : h.status === 'partial' ? 'bg-yellow-500' : 'bg-red-500'}`} />
@@ -2572,18 +2693,18 @@ Generated by SOP Sentinel Grant Writer
   const FEMACompliance = () => (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3"><BadgeCheck className="w-8 h-8 text-blue-600" />FEMA 44 CFR 201.6 Compliance</h2>
-      {analysisResults?.documentMode === 'hmp' ? (
+      {analysisResults?.documentMode === 'hmp' && analysisResults?.femaCompliance ? (
         <>
           <div className="grid grid-cols-4 gap-4">
-            <div className="bg-green-50 border border-green-300 rounded-xl p-4 text-center"><p className="text-3xl font-bold text-green-600">{analysisResults.femaCompliance.compliant}</p><p className="text-sm text-gray-500">Compliant</p></div>
-            <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4 text-center"><p className="text-3xl font-bold text-yellow-600">{analysisResults.femaCompliance.partial}</p><p className="text-sm text-gray-500">Partial</p></div>
-            <div className="bg-red-50 border border-red-300 rounded-xl p-4 text-center"><p className="text-3xl font-bold text-red-600">{analysisResults.femaCompliance.needsImprovement}</p><p className="text-sm text-gray-500">Needs Work</p></div>
-            <div className="bg-blue-50 border border-blue-300 rounded-xl p-4 text-center"><p className="text-3xl font-bold text-blue-600">{analysisResults.femaCompliance.score}%</p><p className="text-sm text-gray-500">Overall Compliance</p></div>
+            <div className="bg-green-50 border border-green-300 rounded-xl p-4 text-center"><p className="text-3xl font-bold text-green-600">{analysisResults.femaCompliance.compliant || 0}</p><p className="text-sm text-gray-500">Compliant</p></div>
+            <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4 text-center"><p className="text-3xl font-bold text-yellow-600">{analysisResults.femaCompliance.partial || 0}</p><p className="text-sm text-gray-500">Partial</p></div>
+            <div className="bg-red-50 border border-red-300 rounded-xl p-4 text-center"><p className="text-3xl font-bold text-red-600">{analysisResults.femaCompliance.needsImprovement || 0}</p><p className="text-sm text-gray-500">Needs Work</p></div>
+            <div className="bg-blue-50 border border-blue-300 rounded-xl p-4 text-center"><p className="text-3xl font-bold text-blue-600">{analysisResults.femaCompliance.score || 0}%</p><p className="text-sm text-gray-500">Overall Compliance</p></div>
           </div>
           <div className="bg-white shadow-sm rounded-xl border border-gray-300 p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Compliance Checklist</h3>
             <div className="space-y-2">
-              {analysisResults.femaCompliance.checklist.map((item, i) => (
+              {(analysisResults.femaCompliance.checklist || []).map((item, i) => (
                 <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-3">
                     {item.status === 'compliant' ? <CheckCircle className="w-5 h-5 text-green-600" /> : item.status === 'partial' ? <Clock className="w-5 h-5 text-yellow-600" /> : <XCircle className="w-5 h-5 text-red-600" />}
@@ -2602,22 +2723,22 @@ Generated by SOP Sentinel Grant Writer
   const MitigationActions = () => (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3"><Target className="w-8 h-8 text-blue-600" />Mitigation Actions</h2>
-      {analysisResults?.documentMode === 'hmp' ? (
+      {analysisResults?.documentMode === 'hmp' && analysisResults?.mitigationActions ? (
         <>
           <div className="bg-white shadow-sm rounded-xl border border-gray-300 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Action Inventory ({analysisResults.mitigationActions.total} total)</h3>
-              <span className="text-sm text-gray-500">Score: {analysisResults.mitigationActions.score}/100</span>
+              <h3 className="text-lg font-semibold text-gray-800">Action Inventory ({analysisResults.mitigationActions.total || 0} total)</h3>
+              <span className="text-sm text-gray-500">Score: {analysisResults.mitigationActions.score || 0}/100</span>
             </div>
             <div className="space-y-3">
-              {analysisResults.mitigationActions.actions.map((a, i) => (
+              {(analysisResults.mitigationActions.actions || []).map((a, i) => (
                 <div key={i} className="p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2"><span className="text-xs font-mono text-gray-500">{a.id}</span><span className={`px-2 py-0.5 rounded text-xs ${a.priority === 'high' ? 'bg-red-100 text-red-600' : a.priority === 'medium' ? 'bg-yellow-100 text-yellow-600' : 'bg-green-100 text-green-600'}`}>{a.priority}</span></div>
                       <p className="font-medium text-gray-800 mt-1">{a.action}</p>
                       <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                        <span>📍 {a.responsible}</span><span>💰 ${a.cost.toLocaleString()}</span><span>📅 {a.timeline}</span><span>🏦 {a.fundingSource}</span>
+                        <span>📍 {a.responsible}</span><span>💰 ${(a.cost || 0).toLocaleString()}</span><span>📅 {a.timeline}</span><span>🏦 {a.fundingSource}</span>
                       </div>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${a.status === 'completed' ? 'bg-green-100 text-green-600' : a.status === 'in-progress' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}>{a.status}</span>
@@ -2705,32 +2826,569 @@ Generated by SOP Sentinel Grant Writer
     </div>
   );
 
-  const HMPReports = () => (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3"><FileOutput className="w-8 h-8 text-blue-600" />HMP Assessment Report</h2>
-      {analysisResults?.documentMode === 'hmp' ? (
-        <div className="bg-white shadow-sm rounded-xl border border-gray-300 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div><h3 className="text-lg font-semibold text-gray-800">Assessment Summary</h3><p className="text-sm text-gray-500">Simulation ID: {analysisResults.simulationId}</p></div>
-            <button onClick={() => {
-              const report = `HAZARD MITIGATION PLAN ASSESSMENT REPORT\n${'='.repeat(50)}\nJurisdiction: ${analysisResults.jurisdiction}\nSimulation ID: ${analysisResults.simulationId}\nDate: ${new Date().toLocaleDateString()}\n\nOVERALL SCORE: ${analysisResults.overallScore}/100\n\nMETRICS:\n${Object.entries(analysisResults.metrics).map(([k,m]) => `- ${m.name}: ${m.value}% (${m.status})`).join('\n')}\n\nFEMA COMPLIANCE: ${analysisResults.femaCompliance.score}%\n${analysisResults.femaCompliance.checklist.map(c => `- ${c.requirement}: ${c.status}`).join('\n')}\n\nMITIGATION ACTIONS: ${analysisResults.mitigationActions.completed}/${analysisResults.mitigationActions.total} completed\n\nRECOMMENDATIONS:\n${analysisResults.recommendations.map((r,i) => `${i+1}. ${r}`).join('\n')}\n\nGenerated by SOP Sentinel | Your Plans, Protected`;
-              const blob = new Blob([report], { type: 'text/plain' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url; a.download = `HMP_Assessment_${analysisResults.simulationId}.txt`;
-              a.click();
-            }} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"><Download className="w-4 h-4" />Export Report</button>
+  const HMPReports = () => {
+    const exportHMPReport = () => {
+      if (!analysisResults) return;
+      try {
+        const r = analysisResults;
+        const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        const jurisdiction = r.jurisdiction || 'Unknown Jurisdiction';
+        const stateName = r.stateName || '';
+        const femaRegionNum = r.femaRegion || '';
+        const femaRegionHQ = r.femaRegionHQ || '';
+        const participatingJuris = r.participatingJurisdictions || [];
+        
+        // Calculate derived metrics
+        const hazardsComplete = r.hazardIdentification?.complete || 0;
+        const hazardsPartial = r.hazardIdentification?.partial || 0;
+        const hazardsMissing = r.hazardIdentification?.missing || 0;
+        const totalHazards = hazardsComplete + hazardsPartial + hazardsMissing;
+        const actionsCompleted = r.mitigationActions?.completed || 0;
+        const actionsTotal = r.mitigationActions?.total || 0;
+        const actionsNotStarted = r.mitigationActions?.notStarted || 0;
+        const actionsInProgress = r.mitigationActions?.inProgress || 0;
+        const totalCost = r.costBenefit?.totalCost || 0;
+        const bcRatio = r.costBenefit?.bcRatio || 0;
+        const femaScore = r.femaCompliance?.score || 0;
+        const completionRate = r.implementationStatus?.completionRate || 0;
+        
+        // Build jurisdiction context
+        const jurisdictionContext = femaRegionNum ? 
+          `FEMA Region ${femaRegionNum} (${femaRegionHQ})${participatingJuris.length > 0 ? `\nParticipating:      ${participatingJuris.join(', ')}` : ''}` : 
+          '';
+        
+        // Generate hazard details
+        const hazardDetails = (r.hazardIdentification?.hazards || []).map(h => {
+          const statusIcon = h.status === 'complete' ? '✓' : h.status === 'partial' ? '◐' : '✗';
+          const riskLabel = h.riskLevel === 'high' ? 'HIGH RISK' : h.riskLevel === 'medium' ? 'MEDIUM RISK' : 'LOW RISK';
+          const gapText = h.status !== 'complete' ? `
+    → GAP IDENTIFIED: ${h.status === 'partial' ? 'Risk assessment incomplete or outdated' : 'Hazard not addressed in current plan'}
+    → ROOT CAUSE [Inferred]: ${h.status === 'partial' ? 'Data collection limitations or recent emergence of hazard profile changes' : 'Historical exclusion from planning scope or low perceived priority'}
+    → MECHANISM: Missing documentation reduces FEMA compliance score and weakens grant competitiveness
+    → RECOMMENDED ACTION: Complete hazard profile with probability, impact, and vulnerability analysis within 90 days` : '';
+          
+          return `  ${statusIcon} ${h.hazard} [${riskLabel}]
+    Status: ${h.status.toUpperCase()} | Last Updated: ${h.lastUpdated}${gapText}`;
+        }).join('\n\n');
+        
+        // Generate action details with gaps - now with county-specific barriers
+        const actionDetails = (r.mitigationActions?.actions || []).map((a, idx) => {
+          const statusIcon = a.status === 'completed' ? '✓' : a.status === 'in-progress' ? '◐' : '○';
+          const priorityFlag = a.priority === 'high' ? '[PRIORITY: HIGH]' : a.priority === 'medium' ? '[PRIORITY: MEDIUM]' : '[PRIORITY: LOW]';
+          
+          // Generate action-specific barrier analysis
+          const getBarrierAnalysis = (action) => {
+            if (action.id === 'MA-1') return 'Willing seller negotiations and relocation logistics';
+            if (action.id === 'MA-2') return 'Engineering design phase and permitting requirements';
+            if (action.id === 'MA-3') return 'Interoperability testing with regional partners';
+            if (action.id === 'MA-4') return 'Staff capacity and community engagement scheduling';
+            if (action.id === 'MA-5') return 'Political considerations and stakeholder alignment';
+            if (action.id === 'MA-6') return 'Supply chain delays and procurement requirements';
+            if (action.id === 'MA-7') return 'Cross-departmental coordination requirements';
+            if (action.id === 'MA-8') return 'Funding gap requires federal grant application';
+            return 'Resource constraints or competing priorities';
+          };
+          
+          const gapAnalysis = a.status !== 'completed' ? `
+    → GAP ANALYSIS:
+      - Current State [Observed]: Action ${a.status === 'in-progress' ? 'initiated but not completed' : 'not yet started'}
+      - Barrier [Inferred]: ${getBarrierAnalysis(a)}
+      - Risk if Unaddressed: Continued vulnerability to hazard impacts; reduced FEMA compliance
+      - Estimated Loss Without Action: $${((a.cost || 0) * (parseFloat(bcRatio) || 2.5)).toLocaleString()} (based on BCR)
+    → RECOMMENDED GRANT PROGRAMS:
+      ${a.fundingSource === 'HMGP' || a.fundingSource === 'BRIC' ? `- ${a.fundingSource} (Primary): Up to 75% federal cost share
+      - EMPG: Supplemental planning support` : `- BRIC: Competitive grant for infrastructure projects
+      - HMGP: Post-disaster mitigation funding
+      - EMPG: Emergency management capacity building`}` : '';
+          
+          return `  ${statusIcon} ${a.id}: ${a.action} ${priorityFlag}
+    Responsible: ${a.responsible} | Timeline: ${a.timeline}
+    Estimated Cost: $${(a.cost || 0).toLocaleString()} | Funding Source: ${a.fundingSource}
+    Status: ${a.status.toUpperCase()}${gapAnalysis}`;
+        }).join('\n\n');
+        
+        // Generate FEMA compliance details
+        const complianceDetails = (r.femaCompliance?.checklist || []).map(c => {
+          const statusIcon = c.status === 'compliant' ? '✓' : c.status === 'partial' ? '◐' : '✗';
+          const remediation = c.status !== 'compliant' ? `
+    → REMEDIATION REQUIRED:
+      - Gap [Observed]: ${c.status === 'partial' ? 'Documentation exists but incomplete or outdated' : 'Requirement not met'}
+      - Consequence: May affect plan approval or grant eligibility
+      - Action: ${c.requirement.includes('Public') ? 'Conduct additional public meetings and document attendance' : c.requirement.includes('Risk') ? 'Update risk assessment with current data and methodologies' : 'Complete required documentation per 44 CFR 201.6'}
+      - Timeline: Complete within 60 days of plan update cycle
+      - Evidence Needed: ${c.requirement.includes('Public') ? 'Meeting sign-in sheets, notices, comment records' : 'Technical analysis reports, data sources, methodology documentation'}` : '';
+          
+          return `  ${statusIcon} ${c.requirement} (${c.section})
+    Status: ${c.status.toUpperCase()}
+    Notes: ${c.notes}${remediation}`;
+        }).join('\n\n');
+        
+        // Calculate funding strategy
+        const federalShare = Math.round(totalCost * 0.75);
+        const stateShare = Math.round(totalCost * 0.10);
+        const localShare = Math.round(totalCost * 0.15);
+        const bricEligible = (r.mitigationActions?.actions || []).filter(a => a.priority === 'high' && a.status !== 'completed').length;
+        const hmgpEligible = (r.mitigationActions?.actions || []).filter(a => a.status !== 'completed').length;
+        
+        // State-specific emergency management contact
+        const stateEMContact = stateName ? `${stateName} Division of Emergency Management` : 'State Emergency Management Agency';
+        
+        // Generate the comprehensive report
+        const report = `
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                 HAZARD MITIGATION PLAN ASSESSMENT REPORT                      ║
+║                      COMPREHENSIVE ANALYSIS & ACTION PLAN                     ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DOCUMENT CONTROL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Jurisdiction:        ${jurisdiction}${femaRegionNum ? `
+State:               ${stateName}
+FEMA Region:         Region ${femaRegionNum} (${femaRegionHQ})` : ''}${participatingJuris.length > 0 ? `
+Participating:       ${participatingJuris.join(', ')}` : ''}
+Assessment ID:       ${r.simulationId || 'N/A'}
+Assessment Date:     ${today}
+Plan Period:         5-Year Cycle (FEMA Required)
+Regulatory Basis:    44 CFR Part 201.6
+Documents Analyzed:  ${(r.documentsAnalyzed || []).join(', ') || 'Uploaded HMP'}
+Confidence Level:    ${r.confidence || 85}%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXECUTIVE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+THESIS STATEMENT:
+The ${jurisdiction} Hazard Mitigation Plan demonstrates ${femaScore >= 80 ? 'strong' : femaScore >= 60 ? 'adequate' : 'insufficient'} FEMA compliance at ${femaScore}%, but implementation progress of ${completionRate}% indicates ${completionRate >= 60 ? 'acceptable' : 'concerning'} execution capacity. ${actionsNotStarted} of ${actionsTotal} mitigation actions remain unstarted, representing approximately $${Math.round(totalCost * (actionsNotStarted / actionsTotal) / 1000)}K in unrealized risk reduction.
+
+KEY FINDINGS [Evidence Classification]:
+
+1. HAZARD COVERAGE [Observed]
+   • ${hazardsComplete}/${totalHazards} hazards fully documented (${Math.round(hazardsComplete/totalHazards*100)}%)
+   • ${hazardsMissing} hazards missing from plan scope
+   • ${hazardsPartial} hazards with incomplete risk assessments
+   
+2. IMPLEMENTATION STATUS [Observed]
+   • ${actionsCompleted}/${actionsTotal} actions completed (${completionRate}%)
+   • ${actionsInProgress} actions in progress
+   • ${actionsNotStarted} actions not started
+   • $${r.implementationStatus?.spentToDate?.toLocaleString() || 0} spent of $${totalCost.toLocaleString()} total budget
+
+3. FEMA COMPLIANCE [Observed]
+   • Overall compliance score: ${femaScore}%
+   • ${r.femaCompliance?.compliant || 0}/${(r.femaCompliance?.checklist || []).length} requirements fully met
+   • ${r.femaCompliance?.partial || 0} requirements partially met (remediation needed)
+   • ${r.femaCompliance?.needsImprovement || 0} requirements not met (critical gaps)
+
+4. GRANT READINESS [Inferred]
+   • Estimated grant readiness: ${r.metrics?.gre?.value || 65}%
+   • ${bricEligible} high-priority actions eligible for BRIC funding
+   • ${hmgpEligible} actions eligible for HMGP post-disaster funding
+   • Potential federal funding: $${federalShare.toLocaleString()} (75% cost share)
+
+CRITICAL INSIGHT:
+Because ${completionRate < 50 ? 'less than half of mitigation actions have been completed' : completionRate < 75 ? 'implementation lags behind planning' : 'implementation is progressing well'}, therefore ${completionRate < 50 ? 'the jurisdiction remains significantly vulnerable to identified hazards despite having a compliant plan' : completionRate < 75 ? 'some planned risk reduction benefits have not yet been realized' : 'the plan is translating into actual risk reduction'}. This implies that ${completionRate < 60 ? 'accelerated implementation should be the primary focus, with grant funding prioritized for stalled high-priority actions' : 'continued steady implementation with annual progress monitoring is appropriate'}.
+
+DECISION IMPLICATIONS:
+1. ${actionsNotStarted > actionsCompleted ? 'Immediate action required: More actions are unstarted than completed' : 'Continue current implementation pace with enhanced monitoring'}
+2. ${femaScore < 80 ? 'Address FEMA compliance gaps before next plan update to maintain grant eligibility' : 'Compliance position is strong; focus on implementation'}
+3. ${bcRatio >= 2 ? `Cost-benefit ratio of ${bcRatio}:1 justifies continued investment in mitigation` : 'Review action prioritization to improve benefit-cost outcomes'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 1: HAZARD IDENTIFICATION ANALYSIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COVERAGE SCORE: ${r.hazardIdentification?.score || 0}%
+
+MECHANISM EXPLANATION:
+FEMA requires local HMPs to identify all natural hazards that may affect the jurisdiction (44 CFR 201.6(c)(2)(i)). Incomplete hazard identification creates two problems: (1) it reduces plan compliance scores, and (2) it leaves communities vulnerable to unaddressed risks. Each missing hazard profile reduces overall preparedness and may affect grant eligibility for related mitigation projects.
+
+HAZARD-BY-HAZARD ASSESSMENT:
+
+${hazardDetails}
+
+GAP SUMMARY TABLE:
+┌────────────────────┬──────────┬─────────────────────────────────────────────┐
+│ Hazard Category    │ Status   │ Required Action                             │
+├────────────────────┼──────────┼─────────────────────────────────────────────┤
+${(r.hazardIdentification?.hazards || []).filter(h => h.status !== 'complete').map(h => 
+`│ ${h.hazard.padEnd(18)} │ ${h.status.toUpperCase().padEnd(8)} │ Complete risk profile within 90 days        │`
+).join('\n')}
+└────────────────────┴──────────┴─────────────────────────────────────────────┘
+
+BOUNDARY CONDITIONS:
+• This assessment assumes hazard data from ${(r.hazardIdentification?.hazards || []).filter(h => h.lastUpdated).map(h => h.lastUpdated).sort()[0] || '2023'} is current
+• Climate change may alter hazard probabilities not yet reflected in historical data
+• New development patterns may create exposure not captured in existing vulnerability assessments
+
+WHAT WOULD CHANGE THIS ASSESSMENT:
+• Updated NOAA/NWS hazard frequency data showing different risk profiles
+• Recent disaster declarations indicating previously underestimated hazards
+• New critical infrastructure that changes vulnerability patterns
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 2: MITIGATION ACTION ANALYSIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+IMPLEMENTATION SCORE: ${r.mitigationActions?.score || 0}/100
+COMPLETION RATE: ${completionRate}%
+
+MECHANISM EXPLANATION:
+Mitigation actions are the operational core of any HMP. A plan with strong hazard identification but weak implementation provides only paper protection. FEMA evaluates plan updates based on implementation progress (44 CFR 201.6(d)(3)). Low completion rates signal capacity constraints that may affect future grant awards.
+
+INFERENTIAL CHAIN:
+Claim: Implementation progress is ${completionRate >= 60 ? 'adequate' : 'inadequate'} for current plan cycle
+↓
+Evidence: ${actionsCompleted}/${actionsTotal} actions completed (${completionRate}%)
+↓
+Mechanism: ${completionRate < 60 ? 'Funding gaps, capacity constraints, or prioritization failures have prevented execution' : 'Adequate resources and coordination have enabled progress'}
+↓
+Implication: ${completionRate < 60 ? 'Without intervention, plan update may show minimal progress, weakening grant competitiveness' : 'Current trajectory supports strong plan update narrative'}
+
+ACTION-BY-ACTION ASSESSMENT:
+
+${actionDetails}
+
+STALLED ACTIONS REQUIRING INTERVENTION:
+${(r.mitigationActions?.actions || []).filter(a => a.status === 'not-started' && a.priority === 'high').map(a => 
+`• ${a.id}: ${a.action}
+  - Estimated Cost: $${(a.cost || 0).toLocaleString()}
+  - Barrier [Inferred]: Funding gap or capacity constraint
+  - Recommended Grant: BRIC or HMGP
+  - If Not Addressed: Continued vulnerability, potential losses of $${((a.cost || 0) * 3.5).toLocaleString()}`
+).join('\n\n') || 'No high-priority stalled actions identified'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 3: FEMA COMPLIANCE ASSESSMENT (44 CFR 201.6)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COMPLIANCE SCORE: ${femaScore}%
+
+MECHANISM EXPLANATION:
+FEMA reviews local HMPs against specific regulatory criteria in 44 CFR 201.6. Plans that do not meet all requirements are returned for revision, delaying approval and affecting grant eligibility. An approved plan is prerequisite for HMGP funding and preferred status for BRIC applications.
+
+REQUIREMENT-BY-REQUIREMENT ANALYSIS:
+
+${complianceDetails}
+
+COMPLIANCE GAP REMEDIATION MATRIX:
+┌─────────────────────────────────────┬──────────────┬─────────────────────────────┐
+│ Requirement                          │ Current Gap  │ Remediation Timeline        │
+├─────────────────────────────────────┼──────────────┼─────────────────────────────┤
+${(r.femaCompliance?.checklist || []).filter(c => c.status !== 'compliant').map(c => 
+`│ ${c.requirement.substring(0, 35).padEnd(35)} │ ${c.status.toUpperCase().padEnd(12)} │ ${c.status === 'partial' ? '30 days' : '60 days'}                       │`
+).join('\n') || '│ No compliance gaps identified       │ N/A          │ N/A                         │'}
+└─────────────────────────────────────┴──────────────┴─────────────────────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 4: COST-BENEFIT ANALYSIS & EXPENSE JUSTIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TOTAL MITIGATION INVESTMENT: $${totalCost.toLocaleString()}
+ESTIMATED AVOIDED LOSSES:    $${(r.costBenefit?.estimatedBenefits || 0).toLocaleString()}
+BENEFIT-COST RATIO:          ${bcRatio}:1
+
+FUNDING BREAKDOWN:
+┌─────────────────────┬──────────────────┬─────────────┐
+│ Funding Source       │ Amount           │ Percentage  │
+├─────────────────────┼──────────────────┼─────────────┤
+│ Federal (FEMA)       │ $${federalShare.toLocaleString().padEnd(14)} │ 75%         │
+│ State Match          │ $${stateShare.toLocaleString().padEnd(14)} │ 10%         │
+│ Local Match          │ $${localShare.toLocaleString().padEnd(14)} │ 15%         │
+├─────────────────────┼──────────────────┼─────────────┤
+│ TOTAL                │ $${totalCost.toLocaleString().padEnd(14)} │ 100%        │
+└─────────────────────┴──────────────────┴─────────────┘
+
+EXPENSE JUSTIFICATION NARRATIVE (For Budget Approval):
+
+The requested investment of $${totalCost.toLocaleString()} in hazard mitigation represents a cost-effective approach to reducing disaster risk within ${jurisdiction}. Based on FEMA's standard benefit-cost methodology, this investment will prevent an estimated $${(r.costBenefit?.estimatedBenefits || 0).toLocaleString()} in future disaster losses, yielding a benefit-cost ratio of ${bcRatio}:1.
+
+This means that for every $1 invested in mitigation, the community will avoid approximately $${bcRatio.toFixed(2)} in future damages. [Inferred from FEMA BCA guidelines and historical loss data patterns]
+
+JUSTIFICATION BY CATEGORY:
+${(r.mitigationActions?.actions || []).filter(a => a.status !== 'completed').slice(0, 5).map(a => 
+`• ${a.action}: $${(a.cost || 0).toLocaleString()}
+  - Justification: Addresses ${a.priority}-priority risk; failure to act exposes community to potential losses of $${((a.cost || 0) * 3.5).toLocaleString()}
+  - BCR Contribution: Estimated ${(bcRatio * (0.8 + Math.random() * 0.4)).toFixed(1)}:1 for this action alone`
+).join('\n\n')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 5: GRANT STRATEGY & FEMA FUNDING ROADMAP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+GRANT READINESS SCORE: ${r.metrics?.gre?.value || 65}%
+
+AVAILABLE FEMA GRANT PROGRAMS:
+
+1. BRIC (Building Resilient Infrastructure and Communities)
+   • Federal Share: Up to 75% (90% for small impoverished communities)
+   • Application Window: Annually, typically September-January
+   • Best For: Large infrastructure projects, capability building
+   • ${jurisdiction} Eligibility: ${bricEligible} actions ready for application
+   • Estimated Award Potential: $${Math.round(federalShare * 0.4).toLocaleString()}
+
+2. HMGP (Hazard Mitigation Grant Program)
+   • Federal Share: 75%
+   • Availability: Following presidential disaster declarations
+   • Best For: Property acquisition, retrofit, infrastructure protection
+   • ${jurisdiction} Eligibility: ${hmgpEligible} actions eligible
+   • Estimated Award Potential: $${Math.round(federalShare * 0.35).toLocaleString()}
+
+3. EMPG (Emergency Management Performance Grant)
+   • Federal Share: 50%
+   • Application Window: Annual, through state emergency management
+   • Best For: Planning, training, exercises, equipment
+   • ${jurisdiction} Eligibility: Planning and capacity actions
+   • Estimated Award Potential: $${Math.round(totalCost * 0.1 * 0.5).toLocaleString()}
+
+4. FMA (Flood Mitigation Assistance)
+   • Federal Share: 75% (100% for repetitive loss properties)
+   • Best For: Flood-specific mitigation projects
+   • ${jurisdiction} Eligibility: Flood-related actions
+   • Estimated Award Potential: $${Math.round(federalShare * 0.15).toLocaleString()}
+
+5. PDM (Pre-Disaster Mitigation) - Replaced by BRIC
+   • Note: This program has been replaced by BRIC but may appear in older references
+
+GRANT MATCHING STRATEGY:
+┌────────────────────────────────────┬──────────────┬─────────────────┬──────────────┐
+│ Mitigation Action                   │ Priority     │ Recommended     │ Est. Award   │
+│                                     │              │ Grant           │              │
+├────────────────────────────────────┼──────────────┼─────────────────┼──────────────┤
+${(r.mitigationActions?.actions || []).filter(a => a.status !== 'completed').slice(0, 5).map(a => 
+`│ ${a.action.substring(0, 35).padEnd(35)}│ ${a.priority.toUpperCase().padEnd(12)} │ ${(a.fundingSource || 'BRIC').padEnd(15)} │ $${Math.round((a.cost || 0) * 0.75).toLocaleString().padEnd(10)} │`
+).join('\n')}
+└────────────────────────────────────┴──────────────┴─────────────────┴──────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6: GRANT NARRATIVE LANGUAGE (FEMA BRIC/HMGP)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The following narrative sections are formatted for direct use in FEMA grant applications:
+
+--- PROBLEM STATEMENT (Use in Section 4 of SF-424) ---
+
+${jurisdiction} faces significant natural hazard risks that threaten public safety, critical infrastructure, and economic stability. Analysis of the current Hazard Mitigation Plan reveals that ${actionsNotStarted} of ${actionsTotal} planned mitigation actions remain unimplemented due to funding constraints, leaving the community vulnerable to ${(r.hazardIdentification?.hazards || []).filter(h => h.riskLevel === 'high').length} high-risk hazards.
+
+Historical data indicates [INSERT: specific disaster history and losses]. Without intervention, the community faces potential losses of $${(r.costBenefit?.estimatedBenefits || 0).toLocaleString()} over the plan period, disproportionately affecting [INSERT: vulnerable populations served].
+
+--- SCOPE OF WORK (Use in Project Narrative) ---
+
+This project will implement the following mitigation measures as identified in the ${jurisdiction} FEMA-approved Hazard Mitigation Plan:
+
+${(r.mitigationActions?.actions || []).filter(a => a.status !== 'completed' && a.priority === 'high').slice(0, 3).map((a, i) => 
+`${i + 1}. ${a.action}
+   - Estimated Cost: $${(a.cost || 0).toLocaleString()}
+   - Timeline: ${a.timeline}
+   - Responsible Party: ${a.responsible}
+   - Hazards Addressed: [INSERT: specific hazards]
+   - Population Protected: [INSERT: number]`
+).join('\n\n')}
+
+--- BENEFIT-COST ANALYSIS NARRATIVE ---
+
+The proposed project yields a benefit-cost ratio of ${bcRatio}:1, exceeding FEMA's minimum threshold of 1.0:1. This ratio was calculated using [FEMA BCA Toolkit v6.0 / jurisdiction-specific loss data] and considers:
+
+• Property damage avoided: $${Math.round((r.costBenefit?.estimatedBenefits || 0) * 0.6).toLocaleString()}
+• Infrastructure protection: $${Math.round((r.costBenefit?.estimatedBenefits || 0) * 0.25).toLocaleString()}
+• Emergency response cost savings: $${Math.round((r.costBenefit?.estimatedBenefits || 0) * 0.1).toLocaleString()}
+• Displacement costs avoided: $${Math.round((r.costBenefit?.estimatedBenefits || 0) * 0.05).toLocaleString()}
+
+[Note: Actual BCA must be completed using FEMA BCA Toolkit with jurisdiction-specific data]
+
+--- ENVIRONMENTAL/HISTORIC PRESERVATION ---
+
+[INSERT: NEPA compliance status and any historic preservation considerations]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 7: 90-DAY IMPLEMENTATION ACTION PLAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WEEK 1-2: COMPLIANCE REMEDIATION
+┌─────┬───────────────────────────────────────────────────────┬─────────────────┬────────────┐
+│ #   │ Action                                                │ Responsible     │ Deadline   │
+├─────┼───────────────────────────────────────────────────────┼─────────────────┼────────────┤
+│ 1.1 │ Review all FEMA compliance gaps identified in this    │ EM Director     │ Day 7      │
+│     │ report and assign remediation owners                  │                 │            │
+├─────┼───────────────────────────────────────────────────────┼─────────────────┼────────────┤
+│ 1.2 │ Complete missing hazard profiles for ${hazardsMissing > 0 ? hazardsMissing : 'any'} gaps    │ Planning Staff  │ Day 14     │
+├─────┼───────────────────────────────────────────────────────┼─────────────────┼────────────┤
+│ 1.3 │ Schedule public meeting for plan input (if needed)    │ EM Coordinator  │ Day 10     │
+└─────┴───────────────────────────────────────────────────────┴─────────────────┴────────────┘
+
+WEEK 3-4: GRANT APPLICATION PREPARATION
+┌─────┬───────────────────────────────────────────────────────┬─────────────────┬────────────┐
+│ #   │ Action                                                │ Responsible     │ Deadline   │
+├─────┼───────────────────────────────────────────────────────┼─────────────────┼────────────┤
+│ 2.1 │ Identify top 3 projects for BRIC application          │ EM Director     │ Day 21     │
+├─────┼───────────────────────────────────────────────────────┼─────────────────┼────────────┤
+│ 2.2 │ Complete FEMA BCA Toolkit analysis for priority       │ Grant Writer    │ Day 28     │
+│     │ projects                                              │                 │            │
+├─────┼───────────────────────────────────────────────────────┼─────────────────┼────────────┤
+│ 2.3 │ Draft project narratives using language in Sec. 6    │ Grant Writer    │ Day 28     │
+├─────┼───────────────────────────────────────────────────────┼─────────────────┼────────────┤
+│ 2.4 │ Obtain cost estimates and contractor quotes           │ Procurement     │ Day 28     │
+└─────┴───────────────────────────────────────────────────────┴─────────────────┴────────────┘
+
+WEEK 5-8: HIGH-PRIORITY ACTION KICKOFF
+┌─────┬───────────────────────────────────────────────────────┬─────────────────┬────────────┐
+│ #   │ Action                                                │ Responsible     │ Deadline   │
+├─────┼───────────────────────────────────────────────────────┼─────────────────┼────────────┤
+│ 3.1 │ Initiate procurement for highest-priority stalled     │ EM Director     │ Day 45     │
+│     │ action using available local funds                    │                 │            │
+├─────┼───────────────────────────────────────────────────────┼─────────────────┼────────────┤
+│ 3.2 │ Submit pre-application to state for BRIC review       │ Grant Writer    │ Day 50     │
+├─────┼───────────────────────────────────────────────────────┼─────────────────┼────────────┤
+│ 3.3 │ Update mitigation action tracking system              │ EM Coordinator  │ Day 55     │
+└─────┴───────────────────────────────────────────────────────┴─────────────────┴────────────┘
+
+WEEK 9-12: MONITORING & REPORTING
+┌─────┬───────────────────────────────────────────────────────┬─────────────────┬────────────┐
+│ #   │ Action                                                │ Responsible     │ Deadline   │
+├─────┼───────────────────────────────────────────────────────┼─────────────────┼────────────┤
+│ 4.1 │ Complete annual progress report for HMP               │ EM Director     │ Day 75     │
+├─────┼───────────────────────────────────────────────────────┼─────────────────┼────────────┤
+│ 4.2 │ Submit final BRIC application (if in window)          │ Grant Writer    │ Day 85     │
+├─────┼───────────────────────────────────────────────────────┼─────────────────┼────────────┤
+│ 4.3 │ Brief elected officials on progress and funding       │ EM Director     │ Day 90     │
+│     │ opportunities                                         │                 │            │
+└─────┴───────────────────────────────────────────────────────┴─────────────────┴────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 8: RISK ANALYSIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TOP 3 RISKS TO MITIGATION SUCCESS:
+
+1. FUNDING GAP RISK [Probability: ${localShare > 500000 ? 'HIGH' : 'MEDIUM'}]
+   • Issue: Local match requirement of $${localShare.toLocaleString()} may exceed available budget
+   • Impact: Inability to secure federal grants requiring match
+   • Mitigation: Identify alternative match sources (in-kind, state programs, bonds)
+   • Trigger: Budget approval delays or shortfalls exceeding 20%
+
+2. CAPACITY CONSTRAINT RISK [Probability: ${actionsNotStarted > actionsCompleted ? 'HIGH' : 'MEDIUM'}]
+   • Issue: ${actionsNotStarted} unstarted actions suggest potential capacity limitations
+   • Impact: Continued implementation delays, poor plan update narrative
+   • Mitigation: Prioritize actions, consider contractors, seek EMPG for capacity building
+   • Trigger: Less than 2 actions completed in next 12 months
+
+3. COMPLIANCE DECAY RISK [Probability: ${femaScore < 80 ? 'MEDIUM' : 'LOW'}]
+   • Issue: ${r.femaCompliance?.partial || 0} partial compliance items could become non-compliant
+   • Impact: Plan approval delay, grant eligibility loss
+   • Mitigation: Establish quarterly compliance review process
+   • Trigger: Any requirement moving from partial to non-compliant
+
+WHAT WOULD CHANGE THIS RISK ASSESSMENT:
+• Major disaster event activating HMGP funding (reduces funding gap risk)
+• Staff turnover in emergency management (increases capacity risk)
+• FEMA policy changes affecting compliance requirements
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 9: NEXT 3 ACTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Based on this assessment, the following three actions will have the highest impact:
+
+1. [IMMEDIATE - THIS WEEK]
+   ${r.femaCompliance?.partial > 0 ? 'Address partial FEMA compliance gaps to protect grant eligibility' : r.hazardIdentification?.missing > 0 ? 'Complete missing hazard profiles to achieve full coverage' : 'Initiate highest-priority stalled mitigation action'}
+   Owner: Emergency Management Director
+   Deadline: 7 days
+   Success Metric: ${r.femaCompliance?.partial > 0 ? 'All partial items have remediation plans' : r.hazardIdentification?.missing > 0 ? 'Missing hazard profiles drafted' : 'Action kickoff meeting completed'}
+
+2. [SHORT-TERM - 30 DAYS]
+   Prepare BRIC grant application for top ${Math.min(3, bricEligible)} eligible projects
+   Owner: Grant Writer / Emergency Management Coordinator
+   Deadline: 30 days
+   Success Metric: Complete draft applications with BCA analysis
+
+3. [MEDIUM-TERM - 90 DAYS]
+   Achieve ${Math.min(completionRate + 15, 100)}% implementation progress (up from ${completionRate}%)
+   Owner: Emergency Management Director
+   Deadline: 90 days
+   Success Metric: ${Math.ceil((actionsTotal * (completionRate + 15) / 100) - actionsCompleted)} additional actions completed
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+QUALITY ASSURANCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Fit:                   HIGH - Analysis aligned with FEMA HMP requirements
+Evidence Discipline:   Claims tagged as Observed/Inferred/Assumed
+Inferential Strength:  MODERATE - Based on document analysis and standard patterns
+Completeness:          All required sections delivered
+Top Outcome Risk:      Implementation stalls due to funding/capacity gaps
+
+KILL SHOT (Highest-Leverage Change):
+${completionRate < 50 ? 'Secure dedicated funding line item for mitigation implementation - without funding, the plan remains paper only' : femaScore < 80 ? 'Remediate FEMA compliance gaps immediately to protect grant eligibility' : 'Submit BRIC application for highest-priority action to unlock federal funding'}
+
+FAILURE TRIGGER (Signal That Recommendations Are Invalid):
+• Significant FEMA policy changes affecting 44 CFR 201.6 requirements
+• Major disaster requiring pivot from mitigation to response/recovery
+• Complete staff turnover eliminating institutional knowledge
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+REPORT GENERATED BY: SOP Sentinel | Your Plans, Protected
+Assessment Date: ${today}
+Report ID: ${r.simulationId || 'N/A'}
+Methodology: Automated document analysis with Monte Carlo simulation
+Confidence Level: ${r.confidence || 85}%
+
+This report is intended for planning purposes. Actual FEMA grant applications 
+require jurisdiction-specific data, official BCA analysis, and state coordination.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+        
+        const blob = new Blob([report], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `HMP_Comprehensive_Assessment_${r.simulationId || 'report'}_${new Date().toISOString().split('T')[0]}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('Export error:', error);
+        alert('Error exporting report. Please try again.');
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3"><FileOutput className="w-8 h-8 text-blue-600" />HMP Assessment Report</h2>
+        {analysisResults?.documentMode === 'hmp' ? (
+          <div className="bg-white shadow-sm rounded-xl border border-gray-300 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div><h3 className="text-lg font-semibold text-gray-800">Comprehensive Assessment Report</h3><p className="text-sm text-gray-500">Simulation ID: {analysisResults.simulationId || 'N/A'}</p></div>
+              <button onClick={exportHMPReport} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium"><Download className="w-5 h-5" />Download Full Report</button>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <h4 className="font-semibold text-blue-800 mb-2">Report Contents:</h4>
+              <ul className="text-sm text-blue-700 grid grid-cols-2 gap-1">
+                <li>✓ Executive Summary with Key Findings</li>
+                <li>✓ Hazard-by-Hazard Gap Analysis</li>
+                <li>✓ FEMA 44 CFR 201.6 Compliance Details</li>
+                <li>✓ Action Plan with Root Cause Analysis</li>
+                <li>✓ Cost-Benefit Analysis & Justifications</li>
+                <li>✓ Grant Strategy (BRIC, HMGP, EMPG, FMA)</li>
+                <li>✓ Ready-to-Use Grant Narrative Language</li>
+                <li>✓ 90-Day Implementation Action Plan</li>
+                <li>✓ Risk Analysis & Mitigation</li>
+                <li>✓ Next 3 Actions with Owners</li>
+              </ul>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-gray-50 rounded-lg"><p className="text-sm text-gray-500">Overall Score</p><p className="text-2xl font-bold text-blue-600">{analysisResults.overallScore || 0}/100</p></div>
+              <div className="p-4 bg-gray-50 rounded-lg"><p className="text-sm text-gray-500">FEMA Compliance</p><p className="text-2xl font-bold text-green-600">{analysisResults.femaCompliance?.score || 0}%</p></div>
+              <div className="p-4 bg-gray-50 rounded-lg"><p className="text-sm text-gray-500">Implementation Progress</p><p className="text-2xl font-bold text-amber-600">{analysisResults.implementationStatus?.completionRate || 0}%</p></div>
+              <div className="p-4 bg-gray-50 rounded-lg"><p className="text-sm text-gray-500">Benefit-Cost Ratio</p><p className="text-2xl font-bold text-purple-600">{analysisResults.costBenefit?.bcRatio || 0}:1</p></div>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-gray-50 rounded-lg"><p className="text-sm text-gray-500">Overall Score</p><p className="text-2xl font-bold text-blue-600">{analysisResults.overallScore}/100</p></div>
-            <div className="p-4 bg-gray-50 rounded-lg"><p className="text-sm text-gray-500">FEMA Compliance</p><p className="text-2xl font-bold text-green-600">{analysisResults.femaCompliance.score}%</p></div>
-            <div className="p-4 bg-gray-50 rounded-lg"><p className="text-sm text-gray-500">Implementation Progress</p><p className="text-2xl font-bold text-amber-600">{analysisResults.implementationStatus.completionRate}%</p></div>
-            <div className="p-4 bg-gray-50 rounded-lg"><p className="text-sm text-gray-500">Benefit-Cost Ratio</p><p className="text-2xl font-bold text-purple-600">{analysisResults.costBenefit.bcRatio}:1</p></div>
-          </div>
-        </div>
-      ) : <div className="bg-white shadow-sm rounded-xl border border-gray-300 p-12 text-center"><FileOutput className="w-16 h-16 text-gray-400 mx-auto mb-4" /><p className="text-gray-500">Run HMP analysis first</p></div>}
-    </div>
-  );
+        ) : <div className="bg-white shadow-sm rounded-xl border border-gray-300 p-12 text-center"><FileOutput className="w-16 h-16 text-gray-400 mx-auto mb-4" /><p className="text-gray-500">Run HMP analysis first</p></div>}
+      </div>
+    );
+  };
 
   const renderModule = () => {
     if (activeTab === 'stress-test') {
